@@ -1,0 +1,437 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Heart, 
+  Check, 
+  Plus, 
+  Minus, 
+  Search, 
+  Star, 
+  Zap, 
+  ClipboardCopy, 
+  ListTodo, 
+  ArrowLeft, 
+  Smartphone, 
+  RotateCcw,
+  History,
+  Save,
+  Trash2,
+  Calendar,
+  Truck,
+  Coffee,
+  MessageCircle
+} from 'lucide-react';
+
+const STORAGE_KEY = 'FISH_INVENTORY_V8_LUXE';
+const HISTORY_KEY = 'FISH_INVENTORY_HISTORY_LUXE';
+
+// 初始品項數據
+const INITIAL_DATA = [
+  // 茶葉
+  { id: 45, category: '茶葉 🍵', name: '四季春茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
+  { id: 1, category: '茶葉 🍵', name: '金萱青茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
+  { id: 2, category: '茶葉 🍵', name: '重金萱', threshold: 0.5, full: 3, unit: '包', current: 0, notified: false },
+  { id: 3, category: '茶葉 🍵', name: '盧哈娜紅茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
+  { id: 4, category: '茶葉 🍵', name: '蘭香綠茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
+  { id: 5, category: '茶葉 🍵', name: '決明子紅茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
+  { id: 6, category: '茶葉 🍵', name: '泰式手標紅茶', threshold: 2, full: 6, unit: '包', current: 0, notified: false },
+  // 果醬
+  { id: 7, category: '果醬 🍓', name: '荔枝醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
+  { id: 8, category: '果醬 🍓', name: '百香醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
+  { id: 9, category: '果醬 🍓', name: '紅柚醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
+  { id: 10, category: '果醬 🍓', name: '芒果醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
+  { id: 11, category: '果醬 🍓', name: '蜂蜜醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
+  { id: 12, category: '果醬 🍓', name: '藍柑橘', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
+  { id: 13, category: '果醬 🍓', name: '蔓越莓醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
+  { id: 14, category: '果醬 🍓', name: '蘋果醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
+  { id: 15, category: '果醬 🍓', name: '藍莓醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
+  // 凍果汁
+  { id: 16, category: '凍果汁 ❄️', name: '檸檬汁', threshold: 0, full: 5, unit: '庫', info: '無庫存', current: 0, notified: false },
+  { id: 17, category: '凍果汁 ❄️', name: '芒果醬(凍)', threshold: 0, full: 5, unit: '庫', info: '無庫存', current: 0, notified: false },
+  { id: 18, category: '凍果汁 ❄️', name: '甘蔗汁', threshold: 1, full: 5, unit: '庫', info: '剩1', current: 0, notified: false },
+  { id: 19, category: '凍果汁 ❄️', name: '百香果汁', threshold: 0, full: 5, unit: '庫', info: '無庫存', current: 0, notified: false },
+  { id: 20, category: '凍果汁 ❄️', name: '柳丁汁', threshold: 0, full: 5, unit: '庫', info: '無庫存', current: 0, notified: false },
+  // 哈蒂廠商
+  { id: 21, category: '哈蒂 🚚', name: '煉乳', threshold: 0, full: 12, unit: '庫', info: '冰箱空', current: 0, notified: false },
+  { id: 22, category: '哈蒂 🚚', name: '奶精', threshold: 1, full: 10, unit: '庫', info: '剩1', current: 0, notified: false },
+  { id: 23, category: '哈蒂 🚚', name: '冬瓜塊', threshold: 1, full: 10, unit: '庫', info: '剩1', current: 0, notified: false },
+  { id: 24, category: '哈蒂 🚚', name: '珍珠', threshold: 0.33, full: 5, unit: '包', info: '剩1/3', current: 0, notified: false },
+  { id: 25, category: '哈蒂 🚚', name: '蔗糖', threshold: 0.33, full: 2, unit: '桶', info: '剩1/3', current: 0, notified: false },
+  { id: 26, category: '哈蒂 🚚', name: '粗吸管', threshold: 2, full: 10, unit: '包', current: 0, notified: false },
+  { id: 27, category: '哈蒂 🚚', name: '細吸管', threshold: 2, full: 10, unit: '包', current: 0, notified: false },
+  // 粉類
+  { id: 28, category: '粉類 🧂', name: '奶酪粉', threshold: 0.33, full: 3, unit: '包', info: '剩1/3', current: 0, notified: false },
+  { id: 29, category: '粉類 🧂', name: '黑芝麻粉', threshold: 0.1, full: 1, unit: '庫', info: '少於200g', current: 0, notified: false },
+  { id: 30, category: '粉類 🧂', name: '抹茶粉', threshold: 0.1, full: 1, unit: '庫', info: '少於200g', current: 0, notified: false },
+  { id: 31, category: '粉類 🧂', name: '可可粉', threshold: 0.1, unit: '庫', info: '少於200g', current: 0, notified: false },
+  // 豆類
+  { id: 32, category: '豆類 🫘', name: '綠豆', threshold: 1, full: 5, unit: '包', info: '剩1', current: 0, notified: false },
+  // 五穀雜糧
+  { id: 33, category: '五穀 🌾', name: '二砂', threshold: 0.1, full: 10, unit: '庫', info: '剩半罐', current: 0, notified: false },
+  { id: 34, category: '五穀 🌾', name: '紅糖液', threshold: 0.1, full: 5, unit: '庫', info: '剩半包', current: 0, notified: false },
+  // 酷朋訂貨
+  { id: 35, category: '酷朋 📦', name: '奶水', threshold: 0, full: 12, unit: '庫', current: 0, notified: false },
+  { id: 36, category: '酷朋 📦', name: '衛生紙', threshold: 1, full: 12, unit: '包', current: 0, notified: false },
+  { id: 37, category: '酷朋 📦', name: '沐浴乳', threshold: 0, full: 3, unit: '庫', current: 0, notified: false },
+  { id: 38, category: '酷朋 📦', name: '洗碗精', threshold: 0, full: 5, unit: '庫', current: 0, notified: false },
+  { id: 39, category: '酷朋 📦', name: '保鮮膜', threshold: 0, full: 3, unit: '庫', current: 0, notified: false },
+  // 容器
+  { id: 40, category: '容器 🥤', name: '奶酪杯', threshold: 1, full: 10, unit: '條', current: 0, notified: false },
+  { id: 41, category: '容器 🥤', name: '小鬆餅盒', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
+  { id: 42, category: '容器 🥤', name: '大鬆餅盒', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
+  { id: 43, category: '容器 🥤', name: '叉子', threshold: 20, full: 200, unit: '支', current: 0, notified: false },
+  { id: 44, category: '容器 🥤', name: '湯匙', threshold: 10, full: 200, unit: '支', current: 0, notified: false },
+];
+
+export default function App() {
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const existingIds = new Set(parsed.map(i => i.id));
+        const missingItems = INITIAL_DATA.filter(i => !existingIds.has(i.id));
+        const syncedItems = parsed.map(item => {
+          const original = INITIAL_DATA.find(i => i.id === item.id);
+          return original ? { ...item, full: original.full } : item;
+        });
+        return [...syncedItems, ...missingItems];
+      } catch (e) { return INITIAL_DATA; }
+    }
+    return INITIAL_DATA;
+  });
+
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem(HISTORY_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [view, setView] = useState('all'); 
+  const [showCopyMsg, setShowCopyMsg] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
+
+  const autoSave = (newItems) => {
+    setItems(newItems);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 500);
+  };
+
+  const saveToHistory = () => {
+    const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
+    const lowStocks = items.filter(i => i.current <= i.threshold);
+    const newEntry = {
+      id: Date.now(),
+      time: timestamp,
+      data: items,
+      lowCount: lowStocks.length
+    };
+    const newHistory = [newEntry, ...history].slice(0, 20);
+    setHistory(newHistory);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    alert(`今日數據已封存 🤎`);
+  };
+
+  const deleteHistory = (id) => {
+    if(confirm('確定要刪除這筆紀錄嗎？')) {
+        const newHistory = history.filter(h => h.id !== id);
+        setHistory(newHistory);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    }
+  };
+
+  const updateQuantity = (id, delta) => {
+    const newItems = items.map(item => {
+      if (item.id === id) {
+        const newVal = Math.max(0, parseFloat((item.current + delta).toFixed(2)));
+        return { ...item, current: newVal };
+      }
+      return item;
+    });
+    autoSave(newItems);
+  };
+
+  const replenishItem = (id) => {
+    const newItems = items.map(item => {
+      if (item.id === id) {
+        return { ...item, current: item.full, notified: false };
+      }
+      return item;
+    });
+    autoSave(newItems);
+  };
+
+  const handleInputChange = (id, value) => {
+    const numValue = value === '' ? 0 : parseFloat(value);
+    const newItems = items.map(item => 
+      item.id === id ? { ...item, current: isNaN(numValue) ? 0 : numValue } : item
+    );
+    autoSave(newItems);
+  };
+
+  const toggleNotified = (id) => {
+    const newItems = items.map(item => 
+      item.id === id ? { ...item, notified: !item.notified } : item
+    );
+    autoSave(newItems);
+  };
+
+  const lowStockItems = useMemo(() => items.filter(i => i.current <= i.threshold), [items]);
+
+  const groupedItems = useMemo(() => {
+    const filtered = items.filter(item => 
+      item.name.includes(searchTerm) || item.category.includes(searchTerm)
+    );
+    return filtered.reduce((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {});
+  }, [items, searchTerm]);
+
+  const getMessageText = () => {
+    const timestamp = new Date().toLocaleString('zh-TW', { hour12: false });
+    const header = `媽媽/爸爸，這是今日(${timestamp})的補貨清單：\n--------------------\n`;
+    const body = lowStockItems.length > 0 
+      ? lowStockItems.map(i => `📍 ${i.name}: 剩 ${i.current} ${i.unit} ${i.info ? `[${i.info}]` : ''}`).join('\n')
+      : '目前庫存都很足夠喔！✨';
+    const footer = `\n--------------------\n如果有補充告訴我！❤️`;
+    return header + body + footer;
+  };
+
+  const copyToClipboard = () => {
+    const textToCopy = getMessageText();
+    const textArea = document.createElement("textarea");
+    textArea.value = textToCopy;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    setShowCopyMsg(true);
+    setTimeout(() => setShowCopyMsg(false), 2000);
+  };
+
+  const sendToLine = () => {
+    const textToCopy = getMessageText();
+    // 使用 LINE URL Scheme 傳送文字
+    const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(textToCopy)}`;
+    window.open(lineUrl, '_blank');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8F4F1] p-3 md:p-6 font-sans text-[#4A3728]">
+      <div className="max-w-2xl mx-auto pb-40">
+        
+        {/* Header */}
+        <header className="bg-white rounded-[40px] shadow-xl shadow-stone-200 p-6 mb-6 border-4 border-[#DBC4B0]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#8B5E3C] p-3 rounded-2xl rotate-3 shadow-md active:scale-110 transition-transform">
+                <Coffee className="text-white" size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-[#5D4037] tracking-tighter">庫存點點名</h1>
+                <div className="flex items-center gap-1">
+                  <span className={`text-[12px] font-black flex items-center gap-0.5 transition-all ${saveFlash ? 'text-amber-600 scale-110' : 'text-stone-400'}`}>
+                    <Smartphone size={12}/> {saveFlash ? '快馬加鞭儲存中...' : '數據已安全封存'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 shadow-inner overflow-x-auto no-scrollbar">
+              <button onClick={() => setView('all')} className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap ${view === 'all' ? 'bg-[#A68A64] text-white shadow-md' : 'text-stone-400'}`}>清點</button>
+              <button onClick={() => setView('report')} className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap ${view === 'report' ? 'bg-[#A68A64] text-white shadow-md' : 'text-stone-400'}`}>告知</button>
+              <button onClick={() => setView('history')} className={`px-4 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap ${view === 'history' ? 'bg-[#A68A64] text-white shadow-md' : 'text-stone-400'}`}>歷史</button>
+            </div>
+          </div>
+
+          {view === 'all' && (
+            <div className="relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300" size={20} />
+              <input 
+                type="text" 
+                placeholder="搜尋清單品項..." 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-[#FAF7F2] border-2 border-stone-100 focus:border-[#DBC4B0] rounded-full outline-none font-bold text-base"
+              />
+            </div>
+          )}
+        </header>
+
+        {/* View Switch */}
+        {view === 'all' && (
+          <div className="space-y-5">
+            {Object.keys(groupedItems).map(category => (
+              <div key={category} className="bg-white rounded-[32px] border-2 border-[#E9E0D2] overflow-hidden shadow-sm">
+                <div className="bg-[#FCF9F7] px-6 py-3 border-b-2 border-[#E9E0D2]">
+                  <h2 className="font-black text-[#8B5E3C] text-[14px] uppercase tracking-widest flex items-center gap-2">
+                    <Star size={14} fill="#8B5E3C" /> {category}
+                  </h2>
+                </div>
+                <div className="divide-y-2 divide-[#F3EDE6]">
+                  {groupedItems[category].map((item) => {
+                    const isLow = item.current <= item.threshold;
+                    return (
+                      <div key={item.id} className={`flex items-center px-4 py-4 transition-all ${item.notified ? 'bg-stone-50 opacity-40' : (isLow ? 'bg-[#FFF2F2]' : 'hover:bg-stone-50')}`}>
+                        <div className="flex-shrink-0 w-10 flex justify-center">
+                          {isLow ? <Heart size={20} fill="#E7C6C6" className="text-[#E7C6C6] animate-pulse" /> : <div className="w-2.5 h-2.5 rounded-full bg-stone-200"></div>}
+                        </div>
+                        <div className="flex-grow flex flex-col overflow-hidden mr-2">
+                          <span className="font-black text-[#5D4037] whitespace-nowrap overflow-hidden text-ellipsis text-lg leading-tight">{item.name}</span>
+                          {item.info && <span className="text-[11px] font-black text-stone-400 whitespace-nowrap mt-0.5">{item.info}</span>}
+                        </div>
+                        
+                        <div className="flex-shrink-0 flex items-center gap-1.5 bg-white p-1 rounded-full border border-stone-200 mr-2 shadow-sm">
+                          <button 
+                            onClick={() => replenishItem(item.id)} 
+                            className="w-10 h-10 rounded-full bg-[#8E735B] flex items-center justify-center text-white active:scale-75 transition-all shadow-sm mr-1"
+                            title="快速補滿"
+                          >
+                            <Truck size={18} />
+                          </button>
+                          
+                          <button onClick={() => updateQuantity(item.id, -0.5)} className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 active:scale-75 transition-all"><Minus size={16} strokeWidth={4} /></button>
+                          <input type="number" step="0.1" value={item.current} onChange={(e) => handleInputChange(item.id, e.target.value)} className={`w-12 text-center bg-transparent font-black text-xl outline-none ${isLow ? 'text-red-800' : 'text-[#8B5E3C]'}`} />
+                          <button onClick={() => updateQuantity(item.id, 0.5)} className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 active:scale-75 transition-all"><Plus size={16} strokeWidth={4} /></button>
+                        </div>
+                        
+                        <button onClick={() => toggleNotified(item.id)} className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${item.notified ? 'bg-[#D4A373] text-white rotate-6 scale-110 shadow-md' : 'bg-white border-2 border-stone-100 text-stone-200'}`}><Check size={22} strokeWidth={4} /></button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            
+            <div className="flex gap-2 mt-8">
+                <button 
+                  onClick={saveToHistory}
+                  className="flex-1 py-5 bg-[#A67C52] text-white rounded-[24px] font-black flex items-center justify-center gap-2 shadow-lg shadow-stone-200 active:scale-95 transition-all text-lg"
+                >
+                  <Save size={24} /> 數據封存
+                </button>
+                <button 
+                  onClick={() => { if(confirm('要重置數字嗎？')) autoSave(INITIAL_DATA); }}
+                  className="w-20 py-5 bg-white text-stone-300 rounded-[24px] border-2 border-stone-100 flex items-center justify-center active:scale-95 transition-all"
+                >
+                  <RotateCcw size={24} />
+                </button>
+            </div>
+          </div>
+        )}
+
+        {view === 'report' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white rounded-[40px] p-8 border-4 border-dashed border-[#DBC4B0] text-center relative overflow-hidden shadow-xl">
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#F8F4F1] rounded-full opacity-50"></div>
+              <div className="w-20 h-20 bg-[#F3EDE6] rounded-full flex items-center justify-center mx-auto mb-4 scale-110"><Coffee className="text-[#8B5E3C]" size={40} /></div>
+              <h2 className="text-2xl font-black text-[#5D4037] mb-6 tracking-tight">補貨回報 🤎</h2>
+              <div className="text-left bg-[#FCF9F7] rounded-[32px] p-6 mb-6 font-mono text-base border-2 border-stone-100 leading-loose max-h-[400px] overflow-y-auto shadow-inner text-[#5D4037]">
+                <div className="whitespace-pre-wrap font-bold">{getMessageText()}</div>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={sendToLine} 
+                  className="group flex items-center justify-center gap-3 w-full py-6 rounded-[28px] font-black bg-[#06C755] text-white shadow-lg active:scale-95 transition-all text-xl shadow-green-100"
+                >
+                  <MessageCircle size={28} /> 一鍵發送 LINE 告知
+                </button>
+                <button 
+                  onClick={copyToClipboard} 
+                  className="group flex items-center justify-center gap-3 w-full py-5 rounded-[24px] font-black border-2 border-[#8B5E3C] text-[#8B5E3C] active:scale-95 transition-all text-lg"
+                >
+                  <ClipboardCopy size={24} /> 僅複製訊息內容
+                </button>
+              </div>
+
+              <button onClick={() => setView('all')} className="mt-8 text-stone-400 font-black text-base flex items-center justify-center gap-2 mx-auto transition-colors hover:text-stone-600"><ArrowLeft size={20} /> 返回清點</button>
+            </div>
+          </div>
+        )}
+
+        {view === 'history' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
+            <div className="bg-[#8B5E3C] rounded-[32px] p-6 text-white shadow-lg">
+                <div className="flex items-center gap-3">
+                    <History size={28} />
+                    <h2 className="text-2xl font-black">歷史數據存檔</h2>
+                </div>
+            </div>
+
+            {history.length > 0 ? history.map((h) => (
+                <div key={h.id} className="bg-white rounded-[28px] p-6 border-2 border-[#E9E0D2] shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-stone-50 p-3 rounded-2xl">
+                            <Calendar className="text-[#8B5E3C]" size={24} />
+                        </div>
+                        <div>
+                            <div className="text-base font-black text-[#5D4037]">{h.time}</div>
+                            <div className="text-xs font-bold text-stone-400">當前有 {h.lowCount} 項警示品項</div>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => {
+                                if(confirm(`要還原此紀錄嗎？`)) {
+                                    setItems(h.data);
+                                    localStorage.setItem(STORAGE_KEY, JSON.stringify(h.data));
+                                    setView('all');
+                                }
+                            }}
+                            className="bg-stone-100 text-[#8B5E3C] p-3.5 rounded-2xl active:scale-75 transition-all"
+                        >
+                            <Zap size={22} fill="currentColor" />
+                        </button>
+                        <button 
+                            onClick={() => deleteHistory(h.id)}
+                            className="bg-stone-50 text-stone-300 p-3.5 rounded-2xl active:scale-75 transition-all"
+                        >
+                            <Trash2 size={22} />
+                        </button>
+                    </div>
+                </div>
+            )) : (
+                <div className="text-center py-24 bg-white rounded-[40px] border-4 border-dashed border-stone-100 text-stone-300 font-black italic">
+                    尚未有封存的紀錄
+                </div>
+            )}
+            <button onClick={() => setView('all')} className="flex items-center justify-center gap-2 text-stone-400 font-black py-6 w-full text-lg transition-colors hover:text-stone-600"><ArrowLeft size={20} /> 返回清點</button>
+          </div>
+        )}
+
+        {/* 複製成功提示 */}
+        {showCopyMsg && (
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#5D4037]/95 text-white px-10 py-5 rounded-full font-black flex items-center gap-3 animate-bounce shadow-2xl z-50 text-lg">
+            <Zap fill="#D4A373" className="text-[#D4A373]" /> 複製成功
+          </div>
+        )}
+
+        {/* 底部導覽欄 */}
+        {view === 'all' && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-2xl z-40">
+            <div className="flex items-center justify-between p-5 bg-[#5D4037] rounded-[36px] text-white shadow-2xl border-b-4 border-[#3E2723]">
+              <div className="flex gap-6 ml-4">
+                <div className="flex flex-col"><span className="text-[10px] font-black opacity-80 uppercase tracking-widest">警告</span><span className="text-2xl font-black text-[#E7C6C6]">{lowStockItems.length}</span></div>
+                <div className="w-px h-8 bg-white/20 self-center"></div>
+                <div className="flex flex-col"><span className="text-[10px] font-black opacity-80 uppercase tracking-widest">告知</span><span className="text-2xl font-black">{items.filter(i => i.notified).length}</span></div>
+              </div>
+              <button className="bg-[#A68A64] text-white px-8 py-4 rounded-[24px] font-black text-base flex items-center gap-2 active:scale-90 transition-all shadow-md" onClick={() => setView('report')}><ListTodo size={20} /> 告知清單</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8F4F1; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      ` }} />
+    </div>
+  );
+}
