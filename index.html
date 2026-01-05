@@ -1,361 +1,345 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Heart, 
-  Check, 
-  Plus, 
-  Minus, 
-  Search, 
-  Star, 
-  Zap, 
-  ClipboardCopy, 
-  ListTodo, 
-  ArrowLeft, 
-  Smartphone, 
-  RotateCcw,
-  Truck,
-  Coffee,
-  MessageCircle
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日清點小本本</title>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @keyframes heartBreathe {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        .animate-heart {
+            animation: heartBreathe 1.2s ease-in-out infinite;
+        }
+        .cute-card {
+            border-radius: 24px;
+            background: white;
+            box-shadow: 0 8px 20px rgba(255, 182, 193, 0.2);
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .toast-enter {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-[#fff5f7] text-[#5d4037]">
+    <div id="root"></div>
 
-/**
- * 庫存點點名 - 定案本地部署版
- * 顏色：高級奶茶色系 (Oatmeal & Caramel)
- * 功能：大字體、自動存檔、快速補貨、LINE 發送
- */
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-const STORAGE_KEY = 'SHOP_INVENTORY_MASTER_SAVE';
+        // 定義組件中會用到的圖示
+        const Heart = () => <i data-lucide="heart"></i>;
+        const Send = () => <i data-lucide="send"></i>;
+        const RotateCw = () => <i data-lucide="rotate-cw"></i>;
+        const Plus = () => <i data-lucide="plus"></i>;
+        const Minus = () => <i data-lucide="minus"></i>;
+        const CheckCircle2 = () => <i data-lucide="check-circle-2"></i>;
+        const AlertCircle = () => <i data-lucide="alert-circle"></i>;
+        const Sparkles = () => <i data-lucide="sparkles"></i>;
 
-// 初始品項數據
-const INITIAL_DATA = [
-  // 茶葉
-  { id: 45, category: '茶葉 🍵', name: '四季春茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
-  { id: 1, category: '茶葉 🍵', name: '金萱青茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
-  { id: 2, category: '茶葉 🍵', name: '重金萱', threshold: 0.5, full: 3, unit: '包', current: 0, notified: false },
-  { id: 3, category: '茶葉 🍵', name: '盧哈娜紅茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
-  { id: 4, category: '茶葉 🍵', name: '蘭香綠茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
-  { id: 5, category: '茶葉 🍵', name: '決明子紅茶', threshold: 1, full: 5, unit: '包', current: 0, notified: false },
-  { id: 6, category: '茶葉 🍵', name: '泰式手標紅茶', threshold: 2, full: 6, unit: '包', current: 0, notified: false },
-  // 果醬
-  { id: 7, category: '果醬 🍓', name: '荔枝醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
-  { id: 8, category: '果醬 🍓', name: '百香醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
-  { id: 9, category: '果醬 🍓', name: '紅柚醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
-  { id: 10, category: '果醬 🍓', name: '芒果醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
-  { id: 11, category: '果醬 🍓', name: '蜂蜜醬', threshold: 0.5, full: 2, unit: '罐', info: '少於300cc', current: 0, notified: false },
-  { id: 12, category: '果醬 🍓', name: '藍柑橘', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
-  { id: 13, category: '果醬 🍓', name: '蔓越莓醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
-  { id: 14, category: '果醬 🍓', name: '蘋果醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
-  { id: 15, category: '果醬 🍓', name: '藍莓醬', threshold: 0.1, full: 1, unit: '瓶', info: '少於300cc', current: 0, notified: false },
-  // 凍果汁
-  { id: 16, category: '凍果汁 ❄️', name: '檸檬汁', threshold: 0, full: 5, unit: '庫', info: '無庫存告', current: 0, notified: false },
-  { id: 17, category: '凍果汁 ❄️', name: '芒果醬(凍)', threshold: 0, full: 5, unit: '庫', info: '無庫存告', current: 0, notified: false },
-  { id: 18, category: '凍果汁 ❄️', name: '甘蔗汁', threshold: 1, full: 5, unit: '庫', info: '剩1告', current: 0, notified: false },
-  { id: 19, category: '凍果汁 ❄️', name: '百香果汁', threshold: 0, full: 5, unit: '庫', info: '無庫存告', current: 0, notified: false },
-  { id: 20, category: '凍果汁 ❄️', name: '柳丁汁', threshold: 0, full: 5, unit: '庫', info: '無庫存告', current: 0, notified: false },
-  // 哈蒂廠商
-  { id: 21, category: '哈蒂 🚚', name: '煉乳', threshold: 0, full: 12, unit: '庫', info: '冰箱空', current: 0, notified: false },
-  { id: 22, category: '哈蒂 🚚', name: '奶精', threshold: 1, full: 10, unit: '庫', info: '剩1告', current: 0, notified: false },
-  { id: 23, category: '哈蒂 🚚', name: '冬瓜塊', threshold: 1, full: 10, unit: '庫', info: '剩1告', current: 0, notified: false },
-  { id: 24, category: '哈蒂 🚚', name: '珍珠', threshold: 0.33, full: 5, unit: '包', info: '剩1/3', current: 0, notified: false },
-  { id: 25, category: '哈蒂 🚚', name: '蔗糖', threshold: 0.33, full: 2, unit: '桶', info: '剩1/3', current: 0, notified: false },
-  { id: 26, category: '哈蒂 🚚', name: '粗吸管', threshold: 2, full: 10, unit: '包', current: 0, notified: false },
-  { id: 27, category: '哈蒂 🚚', name: '細吸管', threshold: 2, full: 10, unit: '包', current: 0, notified: false },
-  // 粉類
-  { id: 28, category: '粉類 🧂', name: '奶酪粉', threshold: 0.33, full: 3, unit: '包', info: '剩1/3', current: 0, notified: false },
-  { id: 29, category: '粉類 🧂', name: '黑芝麻粉', threshold: 0.1, full: 1, unit: '庫', info: '少於200g', current: 0, notified: false },
-  { id: 30, category: '粉類 🧂', name: '抹茶粉', threshold: 0.1, full: 1, unit: '庫', info: '少於200g', current: 0, notified: false },
-  { id: 31, category: '粉類 🧂', name: '可可粉', threshold: 0.1, full: 1, unit: '庫', info: '少於200g', current: 0, notified: false },
-  // 豆類
-  { id: 32, category: '豆類 🫘', name: '綠豆', threshold: 1, full: 5, unit: '包', info: '剩1告', current: 0, notified: false },
-  // 五穀雜糧
-  { id: 33, category: '五穀 🌾', name: '二砂', threshold: 0.1, full: 10, unit: '庫', info: '剩半罐', current: 0, notified: false },
-  { id: 34, category: '五穀 🌾', name: '紅糖液', threshold: 0.1, full: 5, unit: '庫', info: '剩半包', current: 0, notified: false },
-  // 酷朋訂貨
-  { id: 35, category: '酷朋 📦', name: '奶水', threshold: 0, full: 12, unit: '庫', current: 0, notified: false },
-  { id: 36, category: '酷朋 📦', name: '衛生紙', threshold: 1, full: 12, unit: '包', current: 0, notified: false },
-  { id: 37, category: '酷朋 📦', name: '沐浴乳', threshold: 0, full: 3, unit: '庫', current: 0, notified: false },
-  { id: 38, category: '酷朋 📦', name: '洗碗精', threshold: 0, full: 5, unit: '庫', current: 0, notified: false },
-  { id: 39, category: '酷朋 📦', name: '保鮮膜', threshold: 0, full: 3, unit: '庫', current: 0, notified: false },
-  // 容器 (含袋子)
-  { id: 40, category: '容器 🥤', name: '奶酪杯', threshold: 1, full: 10, unit: '條', current: 0, notified: false },
-  { id: 41, category: '容器 🥤', name: '小鬆餅盒', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
-  { id: 42, category: '容器 🥤', name: '大鬆餅盒', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
-  { id: 43, category: '容器 🥤', name: '叉子', threshold: 20, full: 200, unit: '支', current: 0, notified: false },
-  { id: 44, category: '容器 🥤', name: '湯匙', threshold: 10, full: 200, unit: '支', current: 0, notified: false },
-  { id: 46, category: '容器 🥤', name: '2杯袋', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
-  { id: 47, category: '容器 🥤', name: '4杯袋', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
-  { id: 48, category: '容器 🥤', name: '6杯袋', threshold: 20, full: 100, unit: '個', current: 0, notified: false },
-];
+        const App = () => {
+            const initialItems = [
+                // 茶葉
+                { id: 1, category: '茶葉 🍵', name: '金萱青茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 2, category: '茶葉 🍵', name: '重金萱', threshold: 0.5, currentQty: 1, unit: '包', notified: false },
+                { id: 3, category: '茶葉 🍵', name: '四季春茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 4, category: '茶葉 🍵', name: '盧哈娜紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 5, category: '茶葉 🍵', name: '蘭香綠茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 6, category: '茶葉 🍵', name: '決明子紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 7, category: '茶葉 🍵', name: '泰式手標紅茶', threshold: 2, currentQty: 3, unit: '包', notified: false },
+                
+                // 果醬
+                { id: 10, category: '果醬 🍓', name: '荔枝醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 11, category: '果醬 🍓', name: '百香醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 12, category: '果醬 🍓', name: '紅柚醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 13, category: '果醬 🍓', name: '芒果醬(櫃檯)', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 14, category: '果醬 🍓', name: '蜂蜜醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 15, category: '果醬 🍓', name: '藍柑橘', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 16, category: '果醬 🍓', name: '蔓越莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 17, category: '果醬 🍓', name: '蘋果醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 18, category: '果醬 🍓', name: '藍莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
 
-export default function App() {
-  // --- 狀態初始化 ---
-  const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const existingIds = new Set(parsed.map(i => i.id));
-        const missingItems = INITIAL_DATA.filter(i => !existingIds.has(i.id));
-        
-        // 同步並補全欄位
-        const syncedItems = parsed.map(item => {
-          const original = INITIAL_DATA.find(i => i.id === item.id);
-          return original ? { ...item, full: original.full, threshold: original.threshold, category: original.category } : item;
-        });
-        
-        return [...syncedItems, ...missingItems];
-      } catch (e) { return INITIAL_DATA; }
-    }
-    return INITIAL_DATA;
-  });
+                // 凍果汁
+                { id: 20, category: '凍果汁 🍹', name: '檸檬汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 21, category: '凍果汁 🍹', name: '芒果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 22, category: '凍果汁 🍹', name: '甘蔗汁', threshold: 1, currentQty: 2, unit: '庫存', desc: '冷凍剩1庫存需告知', notified: false },
+                { id: 23, category: '凍果汁 🍹', name: '百香果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 24, category: '凍果汁 🍹', name: '柳丁汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [view, setView] = useState('all'); 
-  const [showCopyMsg, setShowCopyMsg] = useState(false);
-  const [saveFlash, setSaveFlash] = useState(false);
+                // 哈蒂廠商
+                { id: 30, category: '哈蒂廠商 📦', name: '煉乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '冰箱無庫存需告知', notified: false },
+                { id: 31, category: '哈蒂廠商 📦', name: '奶精', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1需告知', notified: false },
+                { id: 32, category: '哈蒂廠商 📦', name: '冬瓜塊', threshold: 1, currentQty: 2, unit: '塊', desc: '櫥櫃剩1需告知', notified: false },
+                { id: 33, category: '哈蒂廠商 📦', name: '珍珠', threshold: 0.33, currentQty: 1, unit: '包', desc: '剩1/3包需告知', notified: false },
+                { id: 34, category: '哈蒂廠商 📦', name: '蔗糖', threshold: 0.33, currentQty: 1, unit: '桶', desc: '剩1/3桶需告知', notified: false },
+                { id: 35, category: '哈蒂廠商 📦', name: '粗吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
+                { id: 36, category: '哈蒂廠商 📦', name: '細吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
 
-  // --- 自動保存邏輯 ---
-  const autoSave = (newItems) => {
-    setItems(newItems);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-    setSaveFlash(true);
-    setTimeout(() => setSaveFlash(false), 500);
-  };
+                // 粉類
+                { id: 40, category: '粉類 ✨', name: '奶酪粉', threshold: 0.33, currentQty: 1, unit: '包', desc: '開封剩1/3需告知', notified: false },
+                { id: 41, category: '粉類 ✨', name: '黑芝麻粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
+                { id: 42, category: '粉類 ✨', name: '抹茶粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
+                { id: 43, category: '粉類 ✨', name: '可可粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
 
-  const updateQuantity = (id, delta) => {
-    const newItems = items.map(item => {
-      if (item.id === id) {
-        const newVal = Math.max(0, parseFloat((item.current + delta).toFixed(2)));
-        return { ...item, current: newVal };
-      }
-      return item;
-    });
-    autoSave(newItems);
-  };
+                // 豆類/五穀
+                { id: 50, category: '豆類/五穀 🌾', name: '綠豆', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1包需告知', notified: false },
+                { id: 51, category: '豆類/五穀 🌾', name: '二砂', threshold: 0.5, currentQty: 1, unit: '罐', desc: '無庫存僅剩半罐需告知', notified: false },
+                { id: 52, category: '豆類/五穀 🌾', name: '紅糖液', threshold: 0.5, currentQty: 1, unit: '包', desc: '庫存0且冰箱剩半包需告知', notified: false },
 
-  const replenishItem = (id) => {
-    const newItems = items.map(item => {
-      if (item.id === id) {
-        return { ...item, current: item.full, notified: false };
-      }
-      return item;
-    });
-    autoSave(newItems);
-  };
+                // 酷朋訂貨
+                { id: 60, category: '酷朋訂貨 🛒', name: '奶水', threshold: 0.1, currentQty: 1, unit: '罐', desc: '櫥櫃無庫存需告知', notified: false },
+                { id: 61, category: '酷朋訂貨 🛒', name: '衛生紙', threshold: 1, currentQty: 2, unit: '包', desc: '庫存剩1包需告知', notified: false },
+                { id: 62, category: '酷朋訂貨 🛒', name: '沐浴乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
+                { id: 63, category: '酷朋訂貨 🛒', name: '洗碗精', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
+                { id: 64, category: '酷朋訂貨 🛒', name: '保鮮膜', threshold: 0.1, currentQty: 1, unit: '捲', desc: '無庫存需告知', notified: false },
 
-  const handleInputChange = (id, value) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
-    const newItems = items.map(item => 
-      item.id === id ? { ...item, current: isNaN(numValue) ? 0 : numValue } : item
-    );
-    autoSave(newItems);
-  };
+                // 容器
+                { id: 70, category: '容器 🥤', name: '奶酪杯', threshold: 1, currentQty: 2, unit: '條', desc: '剩1條需告知', notified: false },
+                { id: 71, category: '容器 🥤', name: '小鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
+                { id: 72, category: '容器 🥤', name: '大鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
+                { id: 73, category: '容器 🥤', name: '叉子', threshold: 20, currentQty: 50, unit: '支', desc: '少於20支需告知', notified: false },
+                { id: 74, category: '容器 🥤', name: '湯匙', threshold: 10, currentQty: 20, unit: '支', desc: '少於10支需告知', notified: false },
 
-  const toggleNotified = (id) => {
-    const newItems = items.map(item => 
-      item.id === id ? { ...item, notified: !item.notified } : item
-    );
-    autoSave(newItems);
-  };
+                // 烘焙類
+                { id: 80, category: '烘焙類 🥐', name: '低筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 81, category: '烘焙類 🥐', name: '中筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 82, category: '烘焙類 🥐', name: '高筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 83, category: '烘焙類 🥐', name: '玉米澱粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 84, category: '烘焙類 🥐', name: '奶油', threshold: 150, currentQty: 454, unit: '克', desc: '454g剩小於150g需告知', notified: false },
+            ];
 
-  const lowStockItems = useMemo(() => items.filter(i => i.current <= i.threshold), [items]);
+            const [items, setItems] = useState(initialItems);
+            const [date] = useState(new Date().toLocaleDateString());
+            const [toast, setToast] = useState({ show: false, message: '' });
 
-  const groupedItems = useMemo(() => {
-    const filtered = items.filter(item => 
-      item.name.includes(searchTerm) || item.category.includes(searchTerm)
-    );
-    return filtered.reduce((acc, item) => {
-      if (!acc[item.category]) acc[item.category] = [];
-      acc[item.category].push(item);
-      return acc;
-    }, {});
-  }, [items, searchTerm]);
+            useEffect(() => {
+                // 每次渲染後初始化 Lucide 圖示
+                lucide.createIcons();
+            }, [items, toast]);
 
-  const getMessageText = () => {
-    const dateStr = new Date().toLocaleDateString('zh-TW');
-    const header = `媽媽/爸爸，這是今日(${dateStr})的補貨清單：\n--------------------\n`;
-    const body = lowStockItems.length > 0 
-      ? lowStockItems.map(i => `📍 ${i.name}: 剩 ${i.current} ${i.unit} ${i.info ? `[${i.info}]` : ''}`).join('\n')
-      : '目前庫存都很足夠喔！✨';
-    const footer = `\n--------------------\n如果有補充告訴我！❤️`;
-    return header + body + footer;
-  };
+            const showToast = (msg) => {
+                setToast({ show: true, message: msg });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
 
-  const copyToClipboard = () => {
-    const textToCopy = getMessageText();
-    const textArea = document.createElement("textarea");
-    textArea.value = textToCopy;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    setShowCopyMsg(true);
-    setTimeout(() => setShowCopyMsg(false), 2000);
-  };
+            const updateQty = (id, newQty) => {
+                if (newQty === '') {
+                    setItems(items.map(item => item.id === id ? { ...item, currentQty: '' } : item));
+                    return;
+                }
+                const val = parseFloat(newQty);
+                if (isNaN(val)) return;
+                const roundedVal = Math.round(val * 100) / 100;
+                setItems(items.map(item => 
+                    item.id === id ? { ...item, currentQty: Math.max(0, roundedVal) } : item
+                ));
+            };
 
-  const sendToLine = () => {
-    const textToCopy = getMessageText();
-    const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(textToCopy)}`;
-    window.open(lineUrl, '_blank');
-  };
+            const toggleNotified = (id) => {
+                setItems(items.map(item => 
+                    item.id === id ? { ...item, notified: !item.notified } : item
+                ));
+            };
 
-  return (
-    <div className="min-h-screen bg-[#F8F4F1] p-3 md:p-6 font-sans text-[#4A3728]">
-      <div className="max-w-2xl mx-auto pb-40">
-        
-        {/* Header */}
-        <header className="bg-white rounded-[40px] shadow-xl shadow-stone-200 p-6 mb-6 border-4 border-[#DBC4B0]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#8B5E3C] p-3 rounded-2xl rotate-3 shadow-md active:scale-110 transition-transform">
-                <Coffee className="text-white" size={32} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-[#5D4037] tracking-tighter">庫存點點名</h1>
-                <div className="flex items-center gap-1">
-                  <span className={`text-[12px] font-black flex items-center gap-0.5 transition-all ${saveFlash ? 'text-amber-600 scale-110' : 'text-stone-400'}`}>
-                    <Smartphone size={12}/> {saveFlash ? '自動存檔中...' : '資料已存入手機'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex bg-stone-100 p-1.5 rounded-2xl border border-stone-200 shadow-inner">
-              <button onClick={() => setView('all')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap ${view === 'all' ? 'bg-[#A68A64] text-white shadow-md' : 'text-stone-400'}`}>清點</button>
-              <button onClick={() => setView('report')} className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all whitespace-nowrap ${view === 'report' ? 'bg-[#A68A64] text-white shadow-md' : 'text-stone-400'}`}>告知</button>
-            </div>
-          </div>
+            const restockAll = () => {
+                let count = 0;
+                const newItems = items.map(item => {
+                    const current = parseFloat(item.currentQty) || 0;
+                    if (current <= item.threshold) {
+                        count++;
+                        let newQty = item.threshold * 3;
+                        if (item.unit === '克') newQty = 1000;
+                        if (item.name.includes('麵粉')) newQty = 2;
+                        if (item.name.includes('奶油')) newQty = 454;
+                        return { ...item, currentQty: newQty, notified: false };
+                    }
+                    return item;
+                });
+                setItems(newItems);
+                showToast(`✨ 已經幫你補滿 ${count} 項寶貝囉！`);
+            };
 
-          {view === 'all' && (
-            <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300" size={20} />
-              <input 
-                type="text" 
-                placeholder="搜尋清單品項..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-[#FAF7F2] border-2 border-stone-100 focus:border-[#DBC4B0] rounded-full outline-none font-bold text-base"
-              />
-            </div>
-          )}
-        </header>
+            const sendToLine = () => {
+                const lowStockItems = items.filter(item => {
+                    const current = parseFloat(item.currentQty) || 0;
+                    return current <= item.threshold;
+                });
 
-        {/* List View */}
-        {view === 'all' && (
-          <div className="space-y-5">
-            {Object.keys(groupedItems).map(category => (
-              <div key={category} className="bg-white rounded-[32px] border-2 border-[#E9E0D2] overflow-hidden shadow-sm">
-                <div className="bg-[#FCF9F7] px-6 py-3 border-b-2 border-[#E9E0D2]">
-                  <h2 className="font-black text-[#8B5E3C] text-[14px] uppercase tracking-widest flex items-center gap-2">
-                    <Star size={14} fill="#8B5E3C" /> {category}
-                  </h2>
-                </div>
-                <div className="divide-y-2 divide-[#F3EDE6]">
-                  {groupedItems[category].map((item) => {
-                    const isLow = item.current <= item.threshold;
-                    return (
-                      <div key={item.id} className={`flex items-center px-4 py-4 transition-all ${item.notified ? 'bg-stone-50 opacity-40' : (isLow ? 'bg-[#FFF2F2]' : 'hover:bg-stone-50')}`}>
-                        <div className="flex-shrink-0 w-10 flex justify-center">
-                          {isLow ? <Heart size={20} fill="#E7C6C6" className="text-[#E7C6C6] animate-pulse" /> : <div className="w-2.5 h-2.5 rounded-full bg-stone-200"></div>}
+                if (lowStockItems.length === 0) {
+                    showToast("🌸 目前庫存都很足夠唷！不需要傳送～");
+                    return;
+                }
+
+                let message = `🎀 每日清點小幫手 (${date}) 🎀\n\n⚠️ 這些寶貝快用完了：\n`;
+                lowStockItems.forEach(item => {
+                    const current = item.currentQty === '' ? 0 : item.currentQty;
+                    message += `🍭 ${item.name}: 剩 ${current}${item.unit}\n`;
+                });
+                message += `\n記得要補貨唷！啾咪～(｡◕∀◕｡)`;
+                
+                const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
+                showToast("🚀 正在為您開啟 LINE...");
+                setTimeout(() => {
+                    window.open(lineUrl, '_blank');
+                }, 500);
+            };
+
+            const categories = [...new Set(items.map(item => item.category))];
+
+            return (
+                <div className="min-h-screen p-4 md:p-8">
+                    {/* Toast */}
+                    {toast.show && (
+                        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#5d4037] text-white px-6 py-3 rounded-full shadow-2xl font-bold toast-enter border-2 border-[#ffb6c1]">
+                            {toast.message}
                         </div>
-                        <div className="flex-grow flex flex-col overflow-hidden mr-2">
-                          <span className="font-black text-[#5D4037] whitespace-nowrap overflow-hidden text-ellipsis text-lg leading-tight">{item.name}</span>
-                          {item.info && <span className="text-[11px] font-black text-stone-400 whitespace-nowrap mt-0.5">{item.info}</span>}
+                    )}
+
+                    {/* Header */}
+                    <div className="max-w-5xl mx-auto cute-card p-6 mb-8 border-2 border-[#ffdae0]">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="text-center md:text-left">
+                                <h1 className="text-3xl font-black text-[#ff8fa3] flex items-center justify-center md:justify-start gap-2">
+                                    <span className="text-yellow-400">✨</span> 每日清點小本本
+                                </h1>
+                                <p className="text-[#ffb6c1] font-bold mt-2 tracking-widest">
+                                    🗓️ 今天是 {date}
+                                </p>
+                            </div>
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <button 
+                                    onClick={restockAll}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#e0f7f1] text-[#2d6a4f] rounded-2xl font-bold hover:bg-[#c1e9df] transition-all border-b-4 border-[#add9cc] active:border-b-0 active:translate-y-1"
+                                >
+                                    <i data-lucide="rotate-cw" className="w-5 h-5"></i> 一鍵補滿
+                                </button>
+                                <button 
+                                    onClick={sendToLine}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#ff8fa3] text-white rounded-2xl font-bold hover:bg-[#ff758f] transition-all shadow-lg border-b-4 border-[#e63946] active:translate-y-1 active:border-b-0"
+                                >
+                                    <i data-lucide="send" className="w-5 h-5"></i> 傳送 LINE
+                                </button>
+                            </div>
                         </div>
-                        
-                        <div className="flex-shrink-0 flex items-center gap-1.5 bg-white p-1 rounded-full border border-stone-200 mr-2 shadow-sm">
-                          <button 
-                            onClick={() => replenishItem(item.id)} 
-                            className="w-10 h-10 rounded-full bg-[#8E735B] flex items-center justify-center text-white active:scale-75 transition-all shadow-sm mr-1"
-                            title="快速補滿"
-                          >
-                            <Truck size={18} />
-                          </button>
-                          
-                          <button onClick={() => updateQuantity(item.id, -0.5)} className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 active:scale-75 transition-all"><Minus size={16} strokeWidth={4} /></button>
-                          <input type="number" step="0.1" value={item.current} onChange={(e) => handleInputChange(item.id, e.target.value)} className={`w-12 text-center bg-transparent font-black text-xl outline-none ${isLow ? 'text-red-800' : 'text-[#8B5E3C]'}`} />
-                          <button onClick={() => updateQuantity(item.id, 0.5)} className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 active:scale-75 transition-all"><Plus size={16} strokeWidth={4} /></button>
-                        </div>
-                        
-                        <button onClick={() => toggleNotified(item.id)} className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${item.notified ? 'bg-[#D4A373] text-white rotate-6 scale-110 shadow-md' : 'bg-white border-2 border-stone-100 text-stone-200'}`}><Check size={22} strokeWidth={4} /></button>
-                      </div>
-                    );
-                  })}
+                    </div>
+
+                    {/* Content */}
+                    <div className="max-w-5xl mx-auto space-y-10">
+                        {categories.map(cat => (
+                            <div key={cat} className="space-y-4">
+                                <div className="flex items-center gap-2 ml-2">
+                                    <div className="bg-[#ff8fa3] w-2 h-8 rounded-full"></div>
+                                    <h2 className="text-xl font-black text-[#8d6e63] tracking-wider">{cat}</h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {items.filter(i => i.category === cat).map(item => {
+                                        const currentNum = parseFloat(item.currentQty) || 0;
+                                        const isLow = item.currentQty !== '' && currentNum <= item.threshold;
+                                        return (
+                                            <div 
+                                                key={item.id} 
+                                                className={`cute-card p-5 border-2 transition-all relative overflow-hidden ${isLow ? 'border-[#ffb6c1] bg-[#fffafb]' : 'border-transparent'}`}
+                                            >
+                                                {isLow && (
+                                                    <div className="absolute -right-2 -top-2 opacity-10 text-[#ff8fa3]">
+                                                        <i data-lucide="heart" className="w-20 h-20 fill-current"></i>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {isLow ? (
+                                                            <div className="text-[#ff4d6d] animate-heart"><i data-lucide="heart" className="w-5 h-5 fill-current"></i></div>
+                                                        ) : (
+                                                            <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center"><div className="w-2 h-2 bg-emerald-400 rounded-full"></div></div>
+                                                        )}
+                                                        <span className="font-black text-lg text-[#5d4037]">{item.name}</span>
+                                                    </div>
+                                                    {item.desc && (
+                                                        <div className="group relative">
+                                                            <i data-lucide="alert-circle" className="w-4 h-4 text-[#ffccd5] cursor-help hover:text-[#ff8fa3]"></i>
+                                                            <div className="absolute hidden group-hover:block bottom-full right-0 mb-2 w-48 bg-[#5d4037] text-white text-xs p-3 rounded-2xl shadow-xl z-10 leading-relaxed">
+                                                                💡 {item.desc}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2 mb-5">
+                                                    <div className="flex items-center bg-[#fff0f3] rounded-2xl p-1.5 border border-[#ffdae0]">
+                                                        <button 
+                                                            onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) - (item.threshold < 1 ? 0.1 : 1))}
+                                                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
+                                                        >
+                                                            <i data-lucide="minus" className="w-4 h-4"></i>
+                                                        </button>
+                                                        <input 
+                                                            type="number" 
+                                                            step="any"
+                                                            value={item.currentQty} 
+                                                            onChange={(e) => updateQty(item.id, e.target.value)}
+                                                            className="w-20 bg-transparent text-center font-black text-[#ff8fa3] text-xl outline-none"
+                                                        />
+                                                        <button 
+                                                            onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) + (item.threshold < 1 ? 0.1 : 1))}
+                                                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
+                                                        >
+                                                            <i data-lucide="plus" className="w-4 h-4"></i>
+                                                        </button>
+                                                    </div>
+                                                    <span className="text-sm font-bold text-[#bcaaa4]">{item.unit}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <button 
+                                                        onClick={() => toggleNotified(item.id)}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                                            item.notified 
+                                                            ? 'bg-[#e0f2f1] text-[#009688] shadow-inner' 
+                                                            : 'bg-[#f5f5f5] text-[#9e9e9e] hover:bg-[#eeeeee]'
+                                                        }`}
+                                                    >
+                                                        <i data-lucide="check-circle-2" className="w-4 h-4"></i>
+                                                        {item.notified ? '好哩！已告知' : '還沒說'}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => updateQty(item.id, item.threshold * 2)}
+                                                        className="text-xs font-black text-[#ff8fa3] hover:text-[#ff4d6d] underline decoration-dotted underline-offset-4"
+                                                    >
+                                                        點我補貨
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="max-w-5xl mx-auto mt-16 mb-12 text-center text-[#ffb6c1] text-xs font-bold">
+                        💖 每一口美味，都是因為有你細心打理 💖
+                    </div>
                 </div>
-              </div>
-            ))}
-            
-            <div className="flex justify-center mt-8">
-                <button 
-                  onClick={() => { if(confirm('要重置目前所有數字嗎？')) autoSave(INITIAL_DATA); }}
-                  className="px-8 py-4 bg-white text-stone-300 rounded-[24px] border-2 border-stone-100 flex items-center justify-center gap-2 active:scale-95 transition-all font-bold text-sm"
-                >
-                  <RotateCcw size={18} /> 清空重盤
-                </button>
-            </div>
-          </div>
-        )}
+            );
+        };
 
-        {/* Report View */}
-        {view === 'report' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white rounded-[40px] p-8 border-4 border-dashed border-[#DBC4B0] text-center relative overflow-hidden shadow-xl">
-              <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#F8F4F1] rounded-full opacity-50"></div>
-              <div className="w-20 h-20 bg-[#F3EDE6] rounded-full flex items-center justify-center mx-auto mb-4 scale-110"><Coffee className="text-[#8B5E3C]" size={40} /></div>
-              <h2 className="text-2xl font-black text-[#5D4037] mb-6 tracking-tight">補貨回報 🤎</h2>
-              <div className="text-left bg-[#FCF9F7] rounded-[32px] p-6 mb-6 font-mono text-base border-2 border-stone-100 leading-loose max-h-[400px] overflow-y-auto shadow-inner text-[#5D4037]">
-                <div className="whitespace-pre-wrap font-bold">{getMessageText()}</div>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={sendToLine} 
-                  className="group flex items-center justify-center gap-3 w-full py-6 rounded-[28px] font-black bg-[#06C755] text-white shadow-lg active:scale-95 transition-all text-xl shadow-green-100"
-                >
-                  <MessageCircle size={28} /> 一鍵發送 LINE 告知
-                </button>
-                <button 
-                  onClick={copyToClipboard} 
-                  className="group flex items-center justify-center gap-3 w-full py-5 rounded-[24px] font-black border-2 border-[#8B5E3C] text-[#8B5E3C] active:scale-95 transition-all text-lg"
-                >
-                  <ClipboardCopy size={24} /> 僅複製內容
-                </button>
-              </div>
-
-              <button onClick={() => setView('all')} className="mt-8 text-stone-400 font-black text-base flex items-center justify-center gap-2 mx-auto transition-colors hover:text-stone-600"><ArrowLeft size={20} /> 返回清點</button>
-            </div>
-          </div>
-        )}
-
-        {/* Toast */}
-        {showCopyMsg && (
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#5D4037]/95 text-white px-10 py-5 rounded-full font-black flex items-center gap-3 animate-bounce shadow-2xl z-50 text-lg">
-            <Zap fill="#D4A373" className="text-[#D4A373]" /> 複製成功
-          </div>
-        )}
-
-        {/* Tab Bar */}
-        {view === 'all' && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-2xl z-40">
-            <div className="flex items-center justify-between p-5 bg-[#5D4037] rounded-[36px] text-white shadow-2xl border-b-4 border-[#3E2723]">
-              <div className="flex gap-6 ml-4">
-                <div className="flex flex-col"><span className="text-[10px] font-black opacity-80 uppercase tracking-widest">警告</span><span className="text-2xl font-black text-[#E7C6C6]">{lowStockItems.length}</span></div>
-                <div className="w-px h-8 bg-white/20 self-center"></div>
-                <div className="flex flex-col"><span className="text-[10px] font-black opacity-80 uppercase tracking-widest">告知</span><span className="text-2xl font-black">{items.filter(i => i.notified).length}</span></div>
-              </div>
-              <button className="bg-[#A68A64] text-white px-8 py-4 rounded-[24px] font-black text-base flex items-center gap-2 active:scale-90 transition-all shadow-md" onClick={() => setView('report')}><ListTodo size={20} /> 告知清單</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8F4F1; margin: 0; padding: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      ` }} />
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
