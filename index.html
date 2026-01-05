@@ -1,323 +1,345 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, Send, RotateCw, Plus, Minus, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
-
-const App = () => {
-  const initialItems = [
-    // 茶葉
-    { id: 1, category: '茶葉 🍵', name: '金萱青茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
-    { id: 2, category: '茶葉 🍵', name: '重金萱', threshold: 0.5, currentQty: 1, unit: '包', notified: false },
-    { id: 3, category: '茶葉 🍵', name: '四季春茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
-    { id: 4, category: '茶葉 🍵', name: '盧哈娜紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
-    { id: 5, category: '茶葉 🍵', name: '蘭香綠茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
-    { id: 6, category: '茶葉 🍵', name: '決明子紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
-    { id: 7, category: '茶葉 🍵', name: '泰式手標紅茶', threshold: 2, currentQty: 3, unit: '包', notified: false },
-    
-    // 果醬
-    { id: 10, category: '果醬 🍓', name: '荔枝醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
-    { id: 11, category: '果醬 🍓', name: '百香醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
-    { id: 12, category: '果醬 🍓', name: '紅柚醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
-    { id: 13, category: '果醬 🍓', name: '芒果醬(櫃檯)', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-    { id: 14, category: '果醬 🍓', name: '蜂蜜醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-    { id: 15, category: '果醬 🍓', name: '藍柑橘', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-    { id: 16, category: '果醬 🍓', name: '蔓越莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-    { id: 17, category: '果醬 🍓', name: '蘋果醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-    { id: 18, category: '果醬 🍓', name: '藍莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
-
-    // 凍果汁
-    { id: 20, category: '凍果汁 🍹', name: '檸檬汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
-    { id: 21, category: '凍果汁 🍹', name: '芒果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
-    { id: 22, category: '凍果汁 🍹', name: '甘蔗汁', threshold: 1, currentQty: 2, unit: '庫存', desc: '冷凍剩1庫存需告知', notified: false },
-    { id: 23, category: '凍果汁 🍹', name: '百香果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
-    { id: 24, category: '凍果汁 🍹', name: '柳丁汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
-
-    // 哈蒂廠商
-    { id: 30, category: '哈蒂廠商 📦', name: '煉乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '冰箱無庫存需告知', notified: false },
-    { id: 31, category: '哈蒂廠商 📦', name: '奶精', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1需告知', notified: false },
-    { id: 32, category: '哈蒂廠商 📦', name: '冬瓜塊', threshold: 1, currentQty: 2, unit: '塊', desc: '櫥櫃剩1需告知', notified: false },
-    { id: 33, category: '哈蒂廠商 📦', name: '珍珠', threshold: 0.33, currentQty: 1, unit: '包', desc: '剩1/3包需告知', notified: false },
-    { id: 34, category: '哈蒂廠商 📦', name: '蔗糖', threshold: 0.33, currentQty: 1, unit: '桶', desc: '剩1/3桶需告知', notified: false },
-    { id: 35, category: '哈蒂廠商 📦', name: '粗吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
-    { id: 36, category: '哈蒂廠商 📦', name: '細吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
-
-    // 粉類
-    { id: 40, category: '粉類 ✨', name: '奶酪粉', threshold: 0.33, currentQty: 1, unit: '包', desc: '開封剩1/3需告知', notified: false },
-    { id: 41, category: '粉類 ✨', name: '黑芝麻粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
-    { id: 42, category: '粉類 ✨', name: '抹茶粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
-    { id: 43, category: '粉類 ✨', name: '可可粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
-
-    // 豆類/五穀
-    { id: 50, category: '豆類/五穀 🌾', name: '綠豆', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1包需告知', notified: false },
-    { id: 51, category: '豆類/五穀 🌾', name: '二砂', threshold: 0.5, currentQty: 1, unit: '罐', desc: '無庫存僅剩半罐需告知', notified: false },
-    { id: 52, category: '豆類/五穀 🌾', name: '紅糖液', threshold: 0.5, currentQty: 1, unit: '包', desc: '庫存0且冰箱剩半包需告知', notified: false },
-
-    // 酷朋訂貨
-    { id: 60, category: '酷朋訂貨 🛒', name: '奶水', threshold: 0.1, currentQty: 1, unit: '罐', desc: '櫥櫃無庫存需告知', notified: false },
-    { id: 61, category: '酷朋訂貨 🛒', name: '衛生紙', threshold: 1, currentQty: 2, unit: '包', desc: '庫存剩1包需告知', notified: false },
-    { id: 62, category: '酷朋訂貨 🛒', name: '沐浴乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
-    { id: 63, category: '酷朋訂貨 🛒', name: '洗碗精', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
-    { id: 64, category: '酷朋訂貨 🛒', name: '保鮮膜', threshold: 0.1, currentQty: 1, unit: '捲', desc: '無庫存需告知', notified: false },
-
-    // 容器
-    { id: 70, category: '容器 🥤', name: '奶酪杯', threshold: 1, currentQty: 2, unit: '條', desc: '剩1條需告知', notified: false },
-    { id: 71, category: '容器 🥤', name: '小鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
-    { id: 72, category: '容器 🥤', name: '大鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
-    { id: 73, category: '容器 🥤', name: '叉子', threshold: 20, currentQty: 50, unit: '支', desc: '少於20支需告知', notified: false },
-    { id: 74, category: '容器 🥤', name: '湯匙', threshold: 10, currentQty: 20, unit: '支', desc: '少於10支需告知', notified: false },
-
-    // 烘焙類
-    { id: 80, category: '烘焙類 🥐', name: '低筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
-    { id: 81, category: '烘焙類 🥐', name: '中筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
-    { id: 82, category: '烘焙類 🥐', name: '高筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
-    { id: 83, category: '烘焙類 🥐', name: '玉米澱粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
-    { id: 84, category: '烘焙類 🥐', name: '奶油', threshold: 150, currentQty: 454, unit: '克', desc: '454g剩小於150g需告知', notified: false },
-  ];
-
-  const [items, setItems] = useState(initialItems);
-  const [date] = useState(new Date().toLocaleDateString());
-  const [toast, setToast] = useState({ show: false, message: '' });
-
-  // 顯示提示訊息
-  const showToast = (msg) => {
-    setToast({ show: true, message: msg });
-    setTimeout(() => setToast({ show: false, message: '' }), 3000);
-  };
-
-  const updateQty = (id, newQty) => {
-    if (newQty === '') {
-      setItems(items.map(item => item.id === id ? { ...item, currentQty: '' } : item));
-      return;
-    }
-    const val = parseFloat(newQty);
-    if (isNaN(val)) return;
-    const roundedVal = Math.round(val * 100) / 100;
-    setItems(items.map(item => 
-      item.id === id ? { ...item, currentQty: Math.max(0, roundedVal) } : item
-    ));
-  };
-
-  const toggleNotified = (id) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, notified: !item.notified } : item
-    ));
-  };
-
-  // 一鍵補滿
-  const restockAll = () => {
-    let count = 0;
-    const newItems = items.map(item => {
-      const current = parseFloat(item.currentQty) || 0;
-      if (current <= item.threshold) {
-        count++;
-        let newQty = item.threshold * 3;
-        if (item.unit === '克') newQty = 1000;
-        if (item.name.includes('麵粉')) newQty = 2;
-        if (item.name.includes('奶油')) newQty = 454;
-        return { ...item, currentQty: newQty, notified: false };
-      }
-      return item;
-    });
-    setItems(newItems);
-    showToast(`✨ 已經幫你補滿 ${count} 項寶貝囉！`);
-  };
-
-  // 傳送 LINE
-  const sendToLine = () => {
-    const lowStockItems = items.filter(item => {
-      const current = parseFloat(item.currentQty) || 0;
-      return current <= item.threshold;
-    });
-
-    if (lowStockItems.length === 0) {
-      showToast("🌸 目前庫存都很足夠唷！不需要傳送～");
-      return;
-    }
-
-    let message = `🎀 每日清點小幫手 (${date}) 🎀\n\n⚠️ 這些寶貝快用完了：\n`;
-    lowStockItems.forEach(item => {
-      const current = item.currentQty === '' ? 0 : item.currentQty;
-      message += `🍭 ${item.name}: 剩 ${current}${item.unit}\n`;
-    });
-    message += `\n記得要補貨唷！啾咪～(｡◕∀◕｡)`;
-    
-    // 使用 LINE URL Scheme
-    const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
-    
-    // 嘗試開啟
-    showToast("🚀 正在為您開啟 LINE...");
-    setTimeout(() => {
-        window.open(lineUrl, '_blank');
-    }, 500);
-  };
-
-  const categories = [...new Set(items.map(item => item.category))];
-
-  return (
-    <div className="min-h-screen bg-[#fff5f7] p-4 md:p-8 font-sans text-[#5d4037]">
-      <style>{`
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日清點小本本</title>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
         @keyframes heartBreathe {
-          0%, 100% { transform: scale(1); opacity: 0.7; }
-          50% { transform: scale(1.2); opacity: 1; }
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
         }
         .animate-heart {
-          animation: heartBreathe 1.2s ease-in-out infinite;
+            animation: heartBreathe 1.2s ease-in-out infinite;
         }
         .cute-card {
-          border-radius: 24px;
-          background: white;
-          box-shadow: 0 8px 20px rgba(255, 182, 193, 0.2);
+            border-radius: 24px;
+            background: white;
+            box-shadow: 0 8px 20px rgba(255, 182, 193, 0.2);
         }
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
+            -webkit-appearance: none;
+            margin: 0;
         }
         .toast-enter {
-          animation: slideIn 0.3s ease-out forwards;
+            animation: slideIn 0.3s ease-out forwards;
         }
         @keyframes slideIn {
-          from { transform: translateY(100px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-      `}</style>
+    </style>
+</head>
+<body class="bg-[#fff5f7] text-[#5d4037]">
+    <div id="root"></div>
 
-      {/* Toast 提示小泡泡 */}
-      {toast.show && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#5d4037] text-white px-6 py-3 rounded-full shadow-2xl font-bold toast-enter border-2 border-[#ffb6c1]">
-          {toast.message}
-        </div>
-      )}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-      {/* Header */}
-      <div className="max-w-5xl mx-auto cute-card p-6 mb-8 border-2 border-[#ffdae0]">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl font-black text-[#ff8fa3] flex items-center justify-center md:justify-start gap-2">
-              <Sparkles className="text-yellow-400" fill="currentColor" /> 每日清點小本本
-            </h1>
-            <p className="text-[#ffb6c1] font-bold mt-2 tracking-widest">
-              🗓️ 今天是 {date}
-            </p>
-          </div>
-          <div className="flex gap-4 w-full md:w-auto">
-            <button 
-              onClick={restockAll}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#e0f7f1] text-[#2d6a4f] rounded-2xl font-bold hover:bg-[#c1e9df] transition-all border-b-4 border-[#add9cc] active:border-b-0 active:translate-y-1"
-            >
-              <RotateCw size={20} /> 一鍵補滿
-            </button>
-            <button 
-              onClick={sendToLine}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#ff8fa3] text-white rounded-2xl font-bold hover:bg-[#ff758f] transition-all shadow-lg border-b-4 border-[#e63946] active:translate-y-1 active:border-b-0"
-            >
-              <Send size={20} /> 傳送 LINE
-            </button>
-          </div>
-        </div>
-      </div>
+        // 定義組件中會用到的圖示
+        const Heart = () => <i data-lucide="heart"></i>;
+        const Send = () => <i data-lucide="send"></i>;
+        const RotateCw = () => <i data-lucide="rotate-cw"></i>;
+        const Plus = () => <i data-lucide="plus"></i>;
+        const Minus = () => <i data-lucide="minus"></i>;
+        const CheckCircle2 = () => <i data-lucide="check-circle-2"></i>;
+        const AlertCircle = () => <i data-lucide="alert-circle"></i>;
+        const Sparkles = () => <i data-lucide="sparkles"></i>;
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto space-y-10">
-        {categories.map(cat => (
-          <div key={cat} className="space-y-4">
-            <div className="flex items-center gap-2 ml-2">
-              <div className="bg-[#ff8fa3] w-2 h-8 rounded-full"></div>
-              <h2 className="text-xl font-black text-[#8d6e63] tracking-wider">{cat}</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {items.filter(i => i.category === cat).map(item => {
-                const currentNum = parseFloat(item.currentQty) || 0;
-                const isLow = item.currentQty !== '' && currentNum <= item.threshold;
+        const App = () => {
+            const initialItems = [
+                // 茶葉
+                { id: 1, category: '茶葉 🍵', name: '金萱青茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 2, category: '茶葉 🍵', name: '重金萱', threshold: 0.5, currentQty: 1, unit: '包', notified: false },
+                { id: 3, category: '茶葉 🍵', name: '四季春茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 4, category: '茶葉 🍵', name: '盧哈娜紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 5, category: '茶葉 🍵', name: '蘭香綠茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 6, category: '茶葉 🍵', name: '決明子紅茶', threshold: 1, currentQty: 2, unit: '包', notified: false },
+                { id: 7, category: '茶葉 🍵', name: '泰式手標紅茶', threshold: 2, currentQty: 3, unit: '包', notified: false },
                 
-                return (
-                  <div 
-                    key={item.id} 
-                    className={`cute-card p-5 border-2 transition-all relative overflow-hidden ${isLow ? 'border-[#ffb6c1] bg-[#fffafb]' : 'border-transparent'}`}
-                  >
-                    {isLow && (
-                      <div className="absolute -right-2 -top-2 opacity-10">
-                        <Heart size={80} fill="#ff8fa3" stroke="none" />
-                      </div>
+                // 果醬
+                { id: 10, category: '果醬 🍓', name: '荔枝醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 11, category: '果醬 🍓', name: '百香醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 12, category: '果醬 🍓', name: '紅柚醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '低於半罐/300cc', notified: false },
+                { id: 13, category: '果醬 🍓', name: '芒果醬(櫃檯)', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 14, category: '果醬 🍓', name: '蜂蜜醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 15, category: '果醬 🍓', name: '藍柑橘', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 16, category: '果醬 🍓', name: '蔓越莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 17, category: '果醬 🍓', name: '蘋果醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+                { id: 18, category: '果醬 🍓', name: '藍莓醬', threshold: 0.5, currentQty: 1, unit: '罐', desc: '庫存0且櫃檯少於300cc', notified: false },
+
+                // 凍果汁
+                { id: 20, category: '凍果汁 🍹', name: '檸檬汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 21, category: '凍果汁 🍹', name: '芒果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 22, category: '凍果汁 🍹', name: '甘蔗汁', threshold: 1, currentQty: 2, unit: '庫存', desc: '冷凍剩1庫存需告知', notified: false },
+                { id: 23, category: '凍果汁 🍹', name: '百香果汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+                { id: 24, category: '凍果汁 🍹', name: '柳丁汁', threshold: 0.1, currentQty: 1, unit: '庫存', desc: '冷凍無庫存需告知', notified: false },
+
+                // 哈蒂廠商
+                { id: 30, category: '哈蒂廠商 📦', name: '煉乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '冰箱無庫存需告知', notified: false },
+                { id: 31, category: '哈蒂廠商 📦', name: '奶精', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1需告知', notified: false },
+                { id: 32, category: '哈蒂廠商 📦', name: '冬瓜塊', threshold: 1, currentQty: 2, unit: '塊', desc: '櫥櫃剩1需告知', notified: false },
+                { id: 33, category: '哈蒂廠商 📦', name: '珍珠', threshold: 0.33, currentQty: 1, unit: '包', desc: '剩1/3包需告知', notified: false },
+                { id: 34, category: '哈蒂廠商 📦', name: '蔗糖', threshold: 0.33, currentQty: 1, unit: '桶', desc: '剩1/3桶需告知', notified: false },
+                { id: 35, category: '哈蒂廠商 📦', name: '粗吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
+                { id: 36, category: '哈蒂廠商 📦', name: '細吸管', threshold: 2, currentQty: 4, unit: '包', desc: '剩2包需告知', notified: false },
+
+                // 粉類
+                { id: 40, category: '粉類 ✨', name: '奶酪粉', threshold: 0.33, currentQty: 1, unit: '包', desc: '開封剩1/3需告知', notified: false },
+                { id: 41, category: '粉類 ✨', name: '黑芝麻粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
+                { id: 42, category: '粉類 ✨', name: '抹茶粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
+                { id: 43, category: '粉類 ✨', name: '可可粉', threshold: 200, currentQty: 500, unit: '克', desc: '櫥櫃剩0且檯面少於200g', notified: false },
+
+                // 豆類/五穀
+                { id: 50, category: '豆類/五穀 🌾', name: '綠豆', threshold: 1, currentQty: 2, unit: '包', desc: '櫥櫃剩1包需告知', notified: false },
+                { id: 51, category: '豆類/五穀 🌾', name: '二砂', threshold: 0.5, currentQty: 1, unit: '罐', desc: '無庫存僅剩半罐需告知', notified: false },
+                { id: 52, category: '豆類/五穀 🌾', name: '紅糖液', threshold: 0.5, currentQty: 1, unit: '包', desc: '庫存0且冰箱剩半包需告知', notified: false },
+
+                // 酷朋訂貨
+                { id: 60, category: '酷朋訂貨 🛒', name: '奶水', threshold: 0.1, currentQty: 1, unit: '罐', desc: '櫥櫃無庫存需告知', notified: false },
+                { id: 61, category: '酷朋訂貨 🛒', name: '衛生紙', threshold: 1, currentQty: 2, unit: '包', desc: '庫存剩1包需告知', notified: false },
+                { id: 62, category: '酷朋訂貨 🛒', name: '沐浴乳', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
+                { id: 63, category: '酷朋訂貨 🛒', name: '洗碗精', threshold: 0.1, currentQty: 1, unit: '瓶', desc: '無庫存需告知', notified: false },
+                { id: 64, category: '酷朋訂貨 🛒', name: '保鮮膜', threshold: 0.1, currentQty: 1, unit: '捲', desc: '無庫存需告知', notified: false },
+
+                // 容器
+                { id: 70, category: '容器 🥤', name: '奶酪杯', threshold: 1, currentQty: 2, unit: '條', desc: '剩1條需告知', notified: false },
+                { id: 71, category: '容器 🥤', name: '小鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
+                { id: 72, category: '容器 🥤', name: '大鬆餅盒', threshold: 20, currentQty: 50, unit: '個', desc: '少於20個需告知', notified: false },
+                { id: 73, category: '容器 🥤', name: '叉子', threshold: 20, currentQty: 50, unit: '支', desc: '少於20支需告知', notified: false },
+                { id: 74, category: '容器 🥤', name: '湯匙', threshold: 10, currentQty: 20, unit: '支', desc: '少於10支需告知', notified: false },
+
+                // 烘焙類
+                { id: 80, category: '烘焙類 🥐', name: '低筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 81, category: '烘焙類 🥐', name: '中筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 82, category: '烘焙類 🥐', name: '高筋麵粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 83, category: '烘焙類 🥐', name: '玉米澱粉', threshold: 0.5, currentQty: 1, unit: '包(kg)', desc: '1kg剩小於半包需告知', notified: false },
+                { id: 84, category: '烘焙類 🥐', name: '奶油', threshold: 150, currentQty: 454, unit: '克', desc: '454g剩小於150g需告知', notified: false },
+            ];
+
+            const [items, setItems] = useState(initialItems);
+            const [date] = useState(new Date().toLocaleDateString());
+            const [toast, setToast] = useState({ show: false, message: '' });
+
+            useEffect(() => {
+                // 每次渲染後初始化 Lucide 圖示
+                lucide.createIcons();
+            }, [items, toast]);
+
+            const showToast = (msg) => {
+                setToast({ show: true, message: msg });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            const updateQty = (id, newQty) => {
+                if (newQty === '') {
+                    setItems(items.map(item => item.id === id ? { ...item, currentQty: '' } : item));
+                    return;
+                }
+                const val = parseFloat(newQty);
+                if (isNaN(val)) return;
+                const roundedVal = Math.round(val * 100) / 100;
+                setItems(items.map(item => 
+                    item.id === id ? { ...item, currentQty: Math.max(0, roundedVal) } : item
+                ));
+            };
+
+            const toggleNotified = (id) => {
+                setItems(items.map(item => 
+                    item.id === id ? { ...item, notified: !item.notified } : item
+                ));
+            };
+
+            const restockAll = () => {
+                let count = 0;
+                const newItems = items.map(item => {
+                    const current = parseFloat(item.currentQty) || 0;
+                    if (current <= item.threshold) {
+                        count++;
+                        let newQty = item.threshold * 3;
+                        if (item.unit === '克') newQty = 1000;
+                        if (item.name.includes('麵粉')) newQty = 2;
+                        if (item.name.includes('奶油')) newQty = 454;
+                        return { ...item, currentQty: newQty, notified: false };
+                    }
+                    return item;
+                });
+                setItems(newItems);
+                showToast(`✨ 已經幫你補滿 ${count} 項寶貝囉！`);
+            };
+
+            const sendToLine = () => {
+                const lowStockItems = items.filter(item => {
+                    const current = parseFloat(item.currentQty) || 0;
+                    return current <= item.threshold;
+                });
+
+                if (lowStockItems.length === 0) {
+                    showToast("🌸 目前庫存都很足夠唷！不需要傳送～");
+                    return;
+                }
+
+                let message = `🎀 每日清點小幫手 (${date}) 🎀\n\n⚠️ 這些寶貝快用完了：\n`;
+                lowStockItems.forEach(item => {
+                    const current = item.currentQty === '' ? 0 : item.currentQty;
+                    message += `🍭 ${item.name}: 剩 ${current}${item.unit}\n`;
+                });
+                message += `\n記得要補貨唷！啾咪～(｡◕∀◕｡)`;
+                
+                const lineUrl = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
+                showToast("🚀 正在為您開啟 LINE...");
+                setTimeout(() => {
+                    window.open(lineUrl, '_blank');
+                }, 500);
+            };
+
+            const categories = [...new Set(items.map(item => item.category))];
+
+            return (
+                <div className="min-h-screen p-4 md:p-8">
+                    {/* Toast */}
+                    {toast.show && (
+                        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#5d4037] text-white px-6 py-3 rounded-full shadow-2xl font-bold toast-enter border-2 border-[#ffb6c1]">
+                            {toast.message}
+                        </div>
                     )}
 
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-2">
-                        {isLow ? (
-                          <Heart size={20} className="text-[#ff4d6d] animate-heart" fill="#ff4d6d" />
-                        ) : (
-                          <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center">
-                            <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                          </div>
-                        )}
-                        <span className="font-black text-lg text-[#5d4037]">{item.name}</span>
-                      </div>
-                      {item.desc && (
-                        <div className="group relative">
-                          <AlertCircle size={16} className="text-[#ffccd5] cursor-help hover:text-[#ff8fa3]" />
-                          <div className="absolute hidden group-hover:block bottom-full right-0 mb-2 w-48 bg-[#5d4037] text-white text-xs p-3 rounded-2xl shadow-xl z-10 leading-relaxed">
-                            💡 {item.desc}
-                          </div>
+                    {/* Header */}
+                    <div className="max-w-5xl mx-auto cute-card p-6 mb-8 border-2 border-[#ffdae0]">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="text-center md:text-left">
+                                <h1 className="text-3xl font-black text-[#ff8fa3] flex items-center justify-center md:justify-start gap-2">
+                                    <span className="text-yellow-400">✨</span> 每日清點小本本
+                                </h1>
+                                <p className="text-[#ffb6c1] font-bold mt-2 tracking-widest">
+                                    🗓️ 今天是 {date}
+                                </p>
+                            </div>
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <button 
+                                    onClick={restockAll}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#e0f7f1] text-[#2d6a4f] rounded-2xl font-bold hover:bg-[#c1e9df] transition-all border-b-4 border-[#add9cc] active:border-b-0 active:translate-y-1"
+                                >
+                                    <i data-lucide="rotate-cw" className="w-5 h-5"></i> 一鍵補滿
+                                </button>
+                                <button 
+                                    onClick={sendToLine}
+                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#ff8fa3] text-white rounded-2xl font-bold hover:bg-[#ff758f] transition-all shadow-lg border-b-4 border-[#e63946] active:translate-y-1 active:border-b-0"
+                                >
+                                    <i data-lucide="send" className="w-5 h-5"></i> 傳送 LINE
+                                </button>
+                            </div>
                         </div>
-                      )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 mb-5">
-                      <div className="flex items-center bg-[#fff0f3] rounded-2xl p-1.5 border border-[#ffdae0]">
-                        <button 
-                          onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) - (item.threshold < 1 ? 0.1 : 1))}
-                          className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
-                        >
-                          <Minus size={18} strokeWidth={3} />
-                        </button>
-                        <input 
-                          type="number" 
-                          step="any"
-                          value={item.currentQty} 
-                          onChange={(e) => updateQty(item.id, e.target.value)}
-                          className="w-20 bg-transparent text-center font-black text-[#ff8fa3] text-xl outline-none"
-                        />
-                        <button 
-                          onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) + (item.threshold < 1 ? 0.1 : 1))}
-                          className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
-                        >
-                          <Plus size={18} strokeWidth={3} />
-                        </button>
-                      </div>
-                      <span className="text-sm font-bold text-[#bcaaa4]">{item.unit}</span>
+                    {/* Content */}
+                    <div className="max-w-5xl mx-auto space-y-10">
+                        {categories.map(cat => (
+                            <div key={cat} className="space-y-4">
+                                <div className="flex items-center gap-2 ml-2">
+                                    <div className="bg-[#ff8fa3] w-2 h-8 rounded-full"></div>
+                                    <h2 className="text-xl font-black text-[#8d6e63] tracking-wider">{cat}</h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {items.filter(i => i.category === cat).map(item => {
+                                        const currentNum = parseFloat(item.currentQty) || 0;
+                                        const isLow = item.currentQty !== '' && currentNum <= item.threshold;
+                                        return (
+                                            <div 
+                                                key={item.id} 
+                                                className={`cute-card p-5 border-2 transition-all relative overflow-hidden ${isLow ? 'border-[#ffb6c1] bg-[#fffafb]' : 'border-transparent'}`}
+                                            >
+                                                {isLow && (
+                                                    <div className="absolute -right-2 -top-2 opacity-10 text-[#ff8fa3]">
+                                                        <i data-lucide="heart" className="w-20 h-20 fill-current"></i>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {isLow ? (
+                                                            <div className="text-[#ff4d6d] animate-heart"><i data-lucide="heart" className="w-5 h-5 fill-current"></i></div>
+                                                        ) : (
+                                                            <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center"><div className="w-2 h-2 bg-emerald-400 rounded-full"></div></div>
+                                                        )}
+                                                        <span className="font-black text-lg text-[#5d4037]">{item.name}</span>
+                                                    </div>
+                                                    {item.desc && (
+                                                        <div className="group relative">
+                                                            <i data-lucide="alert-circle" className="w-4 h-4 text-[#ffccd5] cursor-help hover:text-[#ff8fa3]"></i>
+                                                            <div className="absolute hidden group-hover:block bottom-full right-0 mb-2 w-48 bg-[#5d4037] text-white text-xs p-3 rounded-2xl shadow-xl z-10 leading-relaxed">
+                                                                💡 {item.desc}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between gap-2 mb-5">
+                                                    <div className="flex items-center bg-[#fff0f3] rounded-2xl p-1.5 border border-[#ffdae0]">
+                                                        <button 
+                                                            onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) - (item.threshold < 1 ? 0.1 : 1))}
+                                                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
+                                                        >
+                                                            <i data-lucide="minus" className="w-4 h-4"></i>
+                                                        </button>
+                                                        <input 
+                                                            type="number" 
+                                                            step="any"
+                                                            value={item.currentQty} 
+                                                            onChange={(e) => updateQty(item.id, e.target.value)}
+                                                            className="w-20 bg-transparent text-center font-black text-[#ff8fa3] text-xl outline-none"
+                                                        />
+                                                        <button 
+                                                            onClick={() => updateQty(item.id, (parseFloat(item.currentQty) || 0) + (item.threshold < 1 ? 0.1 : 1))}
+                                                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#ff8fa3] active:scale-90"
+                                                        >
+                                                            <i data-lucide="plus" className="w-4 h-4"></i>
+                                                        </button>
+                                                    </div>
+                                                    <span className="text-sm font-bold text-[#bcaaa4]">{item.unit}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <button 
+                                                        onClick={() => toggleNotified(item.id)}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                                            item.notified 
+                                                            ? 'bg-[#e0f2f1] text-[#009688] shadow-inner' 
+                                                            : 'bg-[#f5f5f5] text-[#9e9e9e] hover:bg-[#eeeeee]'
+                                                        }`}
+                                                    >
+                                                        <i data-lucide="check-circle-2" className="w-4 h-4"></i>
+                                                        {item.notified ? '好哩！已告知' : '還沒說'}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => updateQty(item.id, item.threshold * 2)}
+                                                        className="text-xs font-black text-[#ff8fa3] hover:text-[#ff4d6d] underline decoration-dotted underline-offset-4"
+                                                    >
+                                                        點我補貨
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <button 
-                        onClick={() => toggleNotified(item.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
-                          item.notified 
-                          ? 'bg-[#e0f2f1] text-[#009688] shadow-inner' 
-                          : 'bg-[#f5f5f5] text-[#9e9e9e] hover:bg-[#eeeeee]'
-                        }`}
-                      >
-                        <CheckCircle2 size={16} />
-                        {item.notified ? '好哩！已告知' : '還沒說'}
-                      </button>
-                      <button 
-                        onClick={() => updateQty(item.id, item.threshold * 2)}
-                        className="text-xs font-black text-[#ff8fa3] hover:text-[#ff4d6d] underline decoration-dotted underline-offset-4"
-                      >
-                        點我補貨
-                      </button>
+                    <div className="max-w-5xl mx-auto mt-16 mb-12 text-center text-[#ffb6c1] text-xs font-bold">
+                        💖 每一口美味，都是因為有你細心打理 💖
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+                </div>
+            );
+        };
 
-      <div className="max-w-5xl mx-auto mt-16 mb-12 text-center text-[#ffb6c1] text-xs font-bold">
-         💖 每一口美味，都是因為有你細心打理 💖
-      </div>
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
